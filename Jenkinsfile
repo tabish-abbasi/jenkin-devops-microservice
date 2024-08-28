@@ -2,7 +2,8 @@ node {
      stage ('Build') {
        echo "Build"
      }
-     stage ('Test') {
-       echo "Test"
-    }
+     stage ('Test') steps {
+                    echo "Test"
+				sh "mvn test"
+			}
 }
