@@ -3,9 +3,8 @@ node {
        echo "Build"
      }
      stage ('Test') {
-	     echo "Test"
 	steps {
 	  sh "mvn test"
-			}
+	}
      }
 }
