@@ -1,15 +1,74 @@
-node {
-    // Set environment variables
-    def dockerHome = tool 'myDocker'  // Assuming 'myDocker' is the ID of the Docker installation in Jenkins
-    def mavenHome = tool 'myMaven'    // Assuming 'myMaven' is the ID of the Maven installation in Jenkins
-    env.PATH = "${dockerHome}/bin:${mavenHome}/bin:${env.PATH}"
+//SCRIPTED
 
-    stage('Compile') {
-        // Compile stage steps
-        sh 'echo "Using Docker at: ${dockerHome}"'
-        sh 'echo "Using Maven at: ${mavenHome}"'
-        sh 'mvn --version'  // Confirm Maven setup
-        sh 'docker --version'  // Confirm Docker setup
-        sh 'mvn clean compile'  // Compile the project
-    }
+//DECLARATIVE
+pipeline {
+	agent any
+	// agent { docker { image 'maven:3.6.3'} }
+	// agent { docker { image 'node:13.8'} }
+	environment {
+		dockerHome = tool 'myDocker'
+		mavenHome = tool 'myMaven'
+		PATH = "$dockerHome/bin:$mavenHome/bin:$PATH"
+	}
+
+	stages {
+		stage('Checkout') {
+			steps {
+				sh 'mvn --version'
+				sh 'docker version'
+				echo "Build"
+				echo "PATH - $PATH"
+				echo "BUILD_NUMBER - $env.BUILD_NUMBER"
+				echo "BUILD_ID - $env.BUILD_ID"
+				echo "JOB_NAME - $env.JOB_NAME"
+				echo "BUILD_TAG - $env.BUILD_TAG"
+				echo "BUILD_URL - $env.BUILD_URL"
+			}
+		}
+		stage('Compile') {
+			steps {
+				sh "mvn clean compile"
+			}
+		}
+
+
+		stage('Package') {
+			steps {
+				sh "mvn package -DskipTests"
+			}
+		}
+
+		stage('Build Docker Image') {
+			steps {
+				//"docker build -t tabishabbasi/currency-exchange-devops:$env.BUILD_TAG"
+				script {
+					dockerImage = docker.build("tabishabbasi/currency-exchange-devops:${env.BUILD_NUMBER}")
+				}
+
+			}
+		}
+
+		stage('Push Docker Image') {
+			steps {
+				script {
+					docker.withRegistry('', 'dockerhub') {
+						dockerImage.push();
+						dockerImage.push('tabish');
+					}
+				}
+			}
+		}
+	} 
+	
+	post {
+		always {
+			echo 'Im awesome. I run always'
+		}
+		success {
+			echo 'I run when you are successful'
+		}
+		failure {
+			echo 'I run when you fail'
+		}
+	}
 }
